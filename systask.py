@@ -7,31 +7,46 @@ import os
 os.makedirs("screenshots", exist_ok=True)
 
 
-def run_and_type_in_exe(runArgsStr, input_str, file_name):
+def runTypeAndSS(runArgsStr, input_str, file_name):
     subprocess.Popen(
-        f'start cmd /c "{runArgsStr} && echo. && echo. && pause"', shell=True
+        f'start "" cmd /c "{runArgsStr} && echo. && echo. && pause"', shell=True
     )
+
     win = None
     start_time = time.time()
+
     while time.time() - start_time < 5:
-        windows = [
-            w for w in gw.getWindowsWithTitle("cmd") if w.isActive or w.isVisible
-        ]
-        if windows:
-            win = windows[0]
-            win.activate()
+        for w in gw.getWindowsWithTitle("cmd"):
+            try:
+                if w.width > 100 and w.height > 100:
+                    win = w
+                    win.activate()
+                    break
+            except:
+                pass
+        if win:
             break
-        time.sleep(0.1)
+        time.sleep(0.05)
 
-    for inp in input_str.split("\n"):
-        pyautogui.typewrite(inp, interval=0.02)
-        pyautogui.press("enter")
+    if not win:
+        print("No CMD Window Fount")
+        return
 
-    time.sleep(1.8)
+    if gw.getActiveWindow() is not None and gw.getActiveWindow().title != "cmd":
+        exit()
 
-    if win:
-        left, top, width, height = win.left, win.top, win.width, win.height
-        screenshot_path = os.path.join("screenshots", file_name + ".png")
-        pyautogui.screenshot(screenshot_path, region=(left, top, width, height))
+    for inp in input_str.splitlines():
+        if inp.strip():
+            pyautogui.typewrite(inp, interval=0.01)
+            pyautogui.press("enter")
+
+    time.sleep(0.8)
+
+    try:
+        ss_path = os.path.join("screenshots", f"{file_name}.png")
+        pyautogui.screenshot(ss_path, region=(win.left, win.top, win.width, win.height))
+        print(f"Screenshot saved: {ss_path}")
+    except Exception as e:
+        print(f"Screenshot failed for {file_name}: {e}")
 
     pyautogui.press("enter")

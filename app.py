@@ -1,6 +1,10 @@
+import json
+from PIL import Image
 import os
 import shlex
 import subprocess
+from docx.shared import Inches
+from docx import Document
 import systask
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -9,9 +13,14 @@ load_dotenv()
 
 inputScan = ("gets", "fgets", "scanf")
 toScan = ("printf", "gets", "fgets", "scanf", "puts")
+
 EXTENTION = ".c"
 COMPILE_STR = "gcc $s.c -o $s"
 RUN_STR = "$s.exe"
+PAGE_BREAK = False
+
+HEADING_1 = "Week 9"
+PARAGRAPH = "Name: Kartik Sharma"
 
 pathStr = "C:/Users/karti/Desktop/Code/TRY/C/week9/"
 path = os.fsencode(pathStr)
@@ -35,49 +44,72 @@ cases = {}
 for name in listDir:
     fileName = os.fsdecode(name)
     if fileName.endswith(EXTENTION):
-        fileNameOnly = fileName.split(".")[0]
+        baseFileName = fileName.split(".")[0]
         with open(pathStr + fileName, "r", encoding="utf-8") as f:
             content = f.read()
-            contents[fileNameOnly] = content
+            contents[baseFileName] = content
             matchedLines = [
                 line
                 for line in content.split("\n")
-                if any(word in line for word in inputScan)
+                if any(word in line for word in toScan)
             ]
-            cases[fileNameOnly] = matchedLines
+            cases[baseFileName] = matchedLines
+
+
+for key, value in cases.items():
+    cases[key] = (
+        value
+        if any(any(fn in line for fn in ("scanf", "gets", "fgets")) for line in value)
+        else []
+    )
+
 
 prompt = """
-You are given multiple program files in any programming language.  
-Each file listing includes only the I/O-related lines (e.g. print, input, scanf, cin, readline, prompt, etc.).  
-Your task is to infer what the user is supposed to type into the terminal when running that program, and generate 1-2 realistic example input sets per file.
-For example: if the input takes a string, enter a string. if it takes a float, enter a float. 
-And for example: if the final output is something like armstrong number or something similar... give 2 realistic examples. With 1 satisfying and 1 not.
-Otherwise 1 is fine!
+You are given multiple small program files in different programming languages (like C, C++, Python, or Java).  
+Each file listing includes only the input/output-related lines (e.g., print, printf, scanf, cin, cout, input(), readline(), prompt(), System.out.println, etc.).  
+From these, infer what the user would realistically type when running the program in a terminal.
 
-OUTPUT FORMAT RULES (MUST FOLLOW EXACTLY)
-1. Output only valid JSON.
-2. JSON structure:
+OUTPUT RULES (MANDATORY):
+1. Output only valid JSON. No markdown, no ```json, no commentary, nothing before or after.
+2. JSON format:
    {
-     "filename": ["input example 1", "input example 2"],
-     "filename2": ["input example 1"],
-     "filename3": []
+     "1.c": ["input example 1", "input example 2"],
+     "2.cpp": ["input example 1"],
+     "3.py": []
    }
-   (filename 3 has no input source)
-3. Each string inside the array represents one full example of what the user would type in the terminal — use "\\n" for newlines.
-4. Do not include any outputs, file names, comments, or explanations.
-5. If a file requires no input, return an empty array for it.
-6. Inputs must look like what a real person would type based on the prompts and code context.
-7. Keep the examples practical, human-like, and consistent with likely variable types and constraints.
-8. Do not use markdown, triple backticks, or text before/after JSON.
-9. If the language uses typed input (like scanf, cin, or Python input→int), infer the type and give proper values (no dummy text unless strings are expected).
-10. If you enter the length of some array as 5, make sure you have 5 elements in it!
+3. Each string inside the array is **exactly** what a human would type as input for that program.
+4. Use "\\n" for newlines when multiple inputs are expected.
+5. If a file doesn't take any input, give an empty array.
+6. The JSON must always be valid and parseable, even if uncertain — use best inference.
 
-GOAL
-Return a JSON object that's easy to parse and can be directly used to feed realistic input values into each program for testing.
+INPUT INFERENCE LOGIC:
+- If `scanf`, `cin`, or typed `input()` exists, infer numeric or string types appropriately:
+  - `%d` → integer
+  - `%f` / `%lf` → float
+  - `%s` or generic input → string
+  - multiple specifiers → space-separated values on one line unless separated by prompts.
+- For `input()` / `readline()` with prompts, use human-like text values.
+- For array input, make the number of items match any preceding size input.
+- For menu-based programs or condition checks, create examples covering different realistic paths (e.g., valid vs invalid, pass vs fail).
+- Avoid placeholders like “test” or “string” unless clearly appropriate.
+
+EXAMPLE COUNT LOGIC:
+- Give **1 example** for simple single-step inputs (e.g., just one scanf or input).
+- Give **2 examples** when conditional or validation logic seems implied (e.g., even/odd, prime check, grading).
+- Give **up to 3 examples** if input is looped, multi-line, or menu-driven.
+- Each example must look like something a real user would type — not mechanical or repetitive.
+
+MULTI-LANGUAGE CLARITY:
+- Treat `scanf`, `cin`, `readline`, and `input()` as equivalent input commands.
+- Treat `printf`, `cout`, and `print` as output indicators (used to infer context only).
+
+GOAL:
+Return **only** valid JSON with realistic, varied terminal input examples for each file.  
+No markdown, no comments, no extra text. Just clean JSON output.
 
 Now process the following files exactly as given:
-
 """
+
 for baseFileName, ioList in cases.items():
     prompt += baseFileName + EXTENTION + "\n"
 
@@ -88,10 +120,14 @@ for baseFileName, ioList in cases.items():
 
 
 client = OpenAI(api_key=os.getenv("OPENAI_KEY"))
-response = (
-    client.responses.create(model="gpt-4o-mini", input=prompt).output[0].content[0].text
-)
+try:
+    res = client.responses.create(model="gpt-4o-mini", input=prompt)
+except:
+    res = client.responses.create(model="gpt-4o-mini", input=prompt)
 
+response = json.loads(res.output[0].content[0].text)
+
+imageDict = {}
 for baseFileName in cases:
 
     compileArgs = shlex.split(COMPILE_STR.replace("$s", pathStr + baseFileName))
@@ -100,11 +136,51 @@ for baseFileName in cases:
 
     # compile
     subprocess.run(compileArgs)
-    print(baseFileName, ", ")
+    print(baseFileName, ", ", end="")
 
     inputs = response[baseFileName + EXTENTION]
+
+    imageDict[baseFileName] = []
+    imageFileName = f"{baseFileName}(0)"
+
     if len(inputs) == 0:
-        systask.run_and_type_in_exe(runArgsStr, "", baseFileName)
+        systask.runTypeAndSS(runArgsStr, "", imageFileName)
+        imageDict[baseFileName].append(imageFileName)
 
     for i, inp in enumerate(inputs):
-        systask.run_and_type_in_exe(runArgsStr, inp, f"{baseFileName}({i})")
+        imageFileName = f"{baseFileName}({i})"
+        systask.runTypeAndSS(runArgsStr, inp, imageFileName)
+        imageDict[baseFileName].append(imageFileName)
+
+
+document = Document()
+
+document.add_heading(HEADING_1, level=1)
+para = document.add_paragraph(PARAGRAPH)
+
+for fileBaseName, code in contents.items():
+    document.add_heading(fileBaseName, level=2)
+    document.add_paragraph(code)
+
+    for imageName in imageDict[fileBaseName]:
+        imagePath = f"screenshots/{imageName}.png"
+        try:
+            with Image.open(imagePath) as img:
+                width, height = img.size
+                ratio = height / width
+                target_width = Inches(5)
+                target_height = Inches(5 * ratio)
+        except Exception as e:
+            print("Couldnt read image")
+            break
+
+        picture = document.add_picture(
+            imagePath, width=target_width, height=target_height
+        )
+
+    if PAGE_BREAK:
+        document.add_page_break()
+    else:
+        document.add_paragraph("\n")
+
+document.save("docx.docx")

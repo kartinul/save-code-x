@@ -2,3 +2,4 @@ openai
 dotenv
 pillow
 pyautogui
+python-docx
