@@ -5,83 +5,108 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from qfluentwidgets import *
+from qframelesswindow import *
 from qfluentwidgets import FluentIcon as FIF
+
+
+class Config(QConfig):
+    language = OptionsConfigItem(
+        "DOCX", "Language", "Python", OptionsValidator(["C", "C++", "Python"])
+    )
+
+
+cfg = Config()
+qconfig.load("config.json", cfg)
 
 
 class DocxWorker(QThread):
     finished = pyqtSignal(str)
     failed = pyqtSignal(str)
 
-    def __init__(self, folder):
+    def __init__(self, folder, language):
         super().__init__()
         self.folder = folder
+        self.language = language
 
     def run(self):
         try:
             import compileDocx  # import here to avoid blocking GUI
 
-            docx_path = compileDocx.generateDocx(self.folder + "/")
+            docx_path = compileDocx.generateDocx(self.folder + "/", self.language)
             self.finished.emit(docx_path)
         except Exception as e:
             self.failed.emit(str(e))
 
 
 class DocxWidget(QFrame):
-    """Simple, clean DOCX interface"""
-
     def __init__(self, parent=None):
-        super().__init__(parent=parent)
+        super().__init__(parent)
         self.selectedFolder = None
+        self.setObjectName("MakeDocxWidget")
 
-        # --- Layout setup ---
-        self.hBox = QHBoxLayout(self)
-        self.hBox.setAlignment(Qt.AlignCenter)
+        # --- main layout ---
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignTop)
+        layout.setContentsMargins(60, 40, 60, 40)
+        layout.setSpacing(24)
 
-        self.vBox = QVBoxLayout()
-        self.vBox.setAlignment(Qt.AlignCenter)
-        self.vBox.setSpacing(18)
+        # --- title & description ---
+        title = SubtitleLabel("📄 Convert Code to DOCX Document")
+        setFont(title, 28)
+        desc = BodyLabel(
+            "Select your source directory, choose language, and convert to DOCX."
+        )
+        desc.setWordWrap(True)
 
-        # --- Title and desc ---
-        self.title = SubtitleLabel("Make DOCX File")
-        setFont(self.title, 26)
-        self.title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        layout.addWidget(desc)
 
-        self.desc = BodyLabel("Select a folder and generate your DOCX file.")
-        self.desc.setAlignment(Qt.AlignCenter)
+        # --- DOCX settings group ---
+        self.docxGroup = SettingCardGroup("DOCX Settings", self)
 
-        # --- Buttons and label ---
-        self.selectBtn = PrimaryPushButton("Select Folder")
-        self.generateBtn = PrimaryPushButton("Generate DOCX")
+        # Folder selection card
+        self.folderCard = PushSettingCard(
+            text="Browse",
+            icon=FluentIcon.FOLDER,
+            title="Working Directory",
+            content="No folder selected",
+            parent=self.docxGroup,
+        )
+        self.folderCard.clicked.connect(self.selectFolder)
 
-        self.fileLabel = BodyLabel("No folder selected")
-        self.fileLabel.setAlignment(Qt.AlignCenter)
-        self.fileLabel.setWordWrap(True)
+        # Language selection card
+        self.langCard = ComboBoxSettingCard(
+            configItem=cfg.language,
+            icon=FluentIcon.CODE,
+            title="Language",
+            content="Select the programming language of your source files",
+            texts=["Python", "C"],
+            parent=self.docxGroup,
+        )
 
-        # --- Add to layout ---
-        self.vBox.addWidget(self.title)
-        self.vBox.addWidget(self.desc)
-        self.vBox.addSpacing(10)
-        self.vBox.addWidget(self.selectBtn)
-        self.vBox.addWidget(self.fileLabel)
-        self.vBox.addSpacing(10)
-        self.vBox.addWidget(self.generateBtn)
-        self.hBox.addLayout(self.vBox)
+        # Generate DOCX button card
+        self.generateCard = PrimaryPushSettingCard(
+            text="Generate",
+            icon=FluentIcon.DOCUMENT,
+            title="Generate DOCX",
+            content="Convert your selected code files into a DOCX document",
+            parent=self.docxGroup,
+        )
+        self.generateCard.clicked.connect(self.generateDocx)
 
-        # --- Button actions ---
-        self.selectBtn.clicked.connect(self.selectFolder)
-        self.generateBtn.clicked.connect(self.generateDocx)
+        # Add cards to the group
+        self.docxGroup.addSettingCard(self.folderCard)
+        self.docxGroup.addSettingCard(self.langCard)
+        self.docxGroup.addSettingCard(self.generateCard)
 
-        self.setObjectName("Make-Docx-Interface")
+        layout.addWidget(self.docxGroup)
+        layout.addStretch()
 
     def selectFolder(self):
-        """Open folder picker dialog"""
         folder = QFileDialog.getExistingDirectory(self, "Select Folder")
         if folder:
             self.selectedFolder = folder
-            self.fileLabel.setText(f"Selected: {folder}")
-        else:
-            self.selectedFolder = None
-            self.fileLabel.setText("No folder selected")
+            self.folderCard.setContent(folder)
 
     def generateDocx(self):
         if not self.selectedFolder:
@@ -117,7 +142,7 @@ class DocxWidget(QFrame):
             ),
         )
 
-        self.worker = DocxWorker(self.selectedFolder)
+        self.worker = DocxWorker(self.selectedFolder, cfg.lanuage.value)
         self.worker.finished.connect(lambda path: self.onDocxDone(path))
         self.worker.failed.connect(lambda err: self.onDocxFail(err))
         self.worker.start()
@@ -176,6 +201,8 @@ class Window(FluentWindow):
         super().__init__()
 
         setTheme(Theme.AUTO)
+        self.setMicaEffectEnabled(True)
+
         # Create sub-interfaces, when actually using, replace Widget with your own sub-interface
         self.makeDocx = DocxWidget()
         self.videoInterface = Widget("Video Interface", self)

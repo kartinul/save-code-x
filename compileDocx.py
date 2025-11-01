@@ -34,7 +34,7 @@ def sort_key(name):
         return (1, fileName.lower())
 
 
-def generateDocx(pathStr: str):
+def generateDocx(pathStr: str, language):
     print(pathStr)
     path = os.fsencode(pathStr)
     listDir = os.listdir(path)

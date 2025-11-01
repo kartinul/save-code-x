@@ -1,33 +1,19 @@
+from qframelesswindow import AcrylicWindow
+from PyQt5.QtWidgets import QApplication, QLabel
 import sys
-from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout
-from qfluentwidgets import PrimaryPushButton, setTheme, Theme
 
 
-def on_click():
-    print("Fluent button clicked!")
+class TestWin(AcrylicWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Test Acrylic")
+        self.resize(400, 300)
+        label = QLabel("Hello Acrylic", self)
+        label.move(20, 20)
 
 
-app = QApplication(sys.argv)
-
-# 🪟 Window setup
-window = QWidget()
-window.setWindowTitle("My First QFluent App")
-window.resize(400, 300)
-
-# 🎨 Apply Fluent theme
-setTheme(Theme.AUTO)
-
-# 📦 Layout setup
-layout = QVBoxLayout(window)
-
-# 🔘 Add Fluent-style button
-btn = PrimaryPushButton("Click Me")
-btn.clicked.connect(on_click)
-
-layout.addWidget(btn)
-window.setLayout(layout)
-
-# 👀 Show window
-window.show()
-
-sys.exit(app.exec())
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = TestWin()
+    w.show()
+    sys.exit(app.exec_())
