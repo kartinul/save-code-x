@@ -4,10 +4,9 @@ import pyautogui
 import pygetwindow as gw
 import os
 
-os.makedirs("screenshots", exist_ok=True)
-
 
 def runTypeAndSS(runArgsStr, input_str, file_name):
+    os.makedirs("screenshots", exist_ok=True)
     subprocess.Popen(
         f'start "" cmd /c "{runArgsStr} && echo. && echo. && pause"', shell=True
     )
@@ -32,8 +31,13 @@ def runTypeAndSS(runArgsStr, input_str, file_name):
         print("No CMD Window Fount")
         return
 
-    if gw.getActiveWindow() is not None and gw.getActiveWindow().title != "cmd":
-        exit()
+    if gw.getActiveWindow() is None or gw.getActiveWindow().title != "cmd":
+        print("NOT CMD")
+
+        for w in gw.getWindowsWithTitle("cmd"):
+            w.close()
+
+        return -1
 
     for inp in input_str.splitlines():
         if inp.strip():
