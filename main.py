@@ -8,10 +8,12 @@ from qfluentwidgets import *
 from qframelesswindow import *
 from qfluentwidgets import FluentIcon as FIF
 
+languages = ["C", "C++", "Python"]
+
 
 class Config(QConfig):
     language = OptionsConfigItem(
-        "DOCX", "Language", "Python", OptionsValidator(["C", "C++", "Python"])
+        "DOCX", "Language", "Python", OptionsValidator(languages)
     )
 
 
@@ -80,26 +82,19 @@ class DocxWidget(QFrame):
             icon=FluentIcon.CODE,
             title="Language",
             content="Select the programming language of your source files",
-            texts=["Python", "C"],
+            texts=languages,
             parent=self.docxGroup,
         )
-
-        # Generate DOCX button card
-        self.generateCard = PrimaryPushSettingCard(
-            text="Generate",
-            icon=FluentIcon.DOCUMENT,
-            title="Generate DOCX",
-            content="Convert your selected code files into a DOCX document",
-            parent=self.docxGroup,
-        )
-        self.generateCard.clicked.connect(self.generateDocx)
 
         # Add cards to the group
         self.docxGroup.addSettingCard(self.folderCard)
         self.docxGroup.addSettingCard(self.langCard)
-        self.docxGroup.addSettingCard(self.generateCard)
+
+        self.generateBtn = PrimaryPushButton(FluentIcon.DOCUMENT, "Generate")
+        self.generateBtn.setFixedSize(QSize(220, 46))
 
         layout.addWidget(self.docxGroup)
+        layout.addWidget(self.generateBtn, 0, Qt.AlignCenter)
         layout.addStretch()
 
     def selectFolder(self):
