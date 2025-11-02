@@ -9,7 +9,9 @@ This is a desktop app is made to make coding work for college smoother and less 
   - The num will automatically increment as you paste more files!
 - DOCX Generator: turn saved code into Word report.
   - Select a folder and the language the code's written in
-  - This will automatically run through every file in that folder, sort it in numerical ascending order, compile it, run the code in a new terminal and take screenshot of it
+  - This will automatically run through every file in that folder, sort it in numerical ascending order
+  - Will detect the inputs and outputs and ask AI to generate 1 or 2 sample inputs for the same
+  - Then it compiles run the code in a new terminal and take screenshot of it
   - It will then generate a docx file with a Header and description of choosing and contain all of your code with their outputs in order
 - Settings
 
@@ -36,7 +38,9 @@ Activate venv and install PyInstaller
 Then build with: `python -m PyInstaller .\main.py --onefile --noconsole --add-data "languages.json;."`
 
 ## Demo
-https://youtu.be/zmnwcFAomLw
-https://youtu.be/_SVnLpMCFvE
+- https://youtu.be/zmnwcFAomLw
+- https://youtu.be/_SVnLpMCFvE
 
+
+## Credit
 <a href="https://www.flaticon.com/free-icons/code" title="code icons">Code icons created by Smashicons - Flaticon</a>
