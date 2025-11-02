@@ -4,3 +4,4 @@ pillow
 pyautogui
 python-docx
 PyQt-Fluent-Widgets[full]
+qasync==0.24.0

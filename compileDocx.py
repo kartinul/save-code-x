@@ -156,7 +156,10 @@ def generateDocx(
         # compile
         if compile_cmd != "":
             compileArgs = shlex.split(compile_cmd.replace("$s", pathStr + baseFileName))
-            subprocess.run(compileArgs)
+            subprocess.run(
+                compileArgs,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
         print(baseFileName, ", ", end="")
 
         inputs = response[baseFileName + extension]
