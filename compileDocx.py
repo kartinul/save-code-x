@@ -11,16 +11,16 @@ from openai import OpenAI
 
 load_dotenv()
 
-inputScan = ("gets", "fgets", "scanf")
-toScan = ("printf", "gets", "fgets", "scanf", "puts")
+INPUTSCAN = ("gets", "fgets", "scanf")
+TOSCAN = ("printf", "gets", "fgets", "scanf", "puts")
 
 EXTENTION = ".c"
 COMPILE_STR = "gcc $s.c -o $s"
 RUN_STR = "$s.exe"
-PAGE_BREAK = False
 
-HEADING_1 = "Week 9"
+HEADING = "Week 9"
 PARAGRAPH = "Name: Kartik Sharma"
+PAGE_BREAK = False
 
 contents = {}
 
@@ -34,8 +34,32 @@ def sort_key(name):
         return (1, fileName.lower())
 
 
-def generateDocx(pathStr: str, language):
-    print(pathStr)
+def generateDocx(
+    pathStr: str,
+    inputScan=INPUTSCAN,
+    printScan=TOSCAN,
+    extension=EXTENTION,
+    compile_cmd=COMPILE_STR,
+    run_cmd=RUN_STR,
+    page_break=False,
+    heading=HEADING,
+    paragraph=PARAGRAPH,
+):
+
+    toScan = inputScan + printScan
+    print(
+        [
+            pathStr,
+            inputScan,
+            toScan,
+            extension,
+            compile_cmd,
+            run_cmd,
+            page_break,
+            heading,
+            paragraph,
+        ]
+    )
     path = os.fsencode(pathStr)
     listDir = os.listdir(path)
     listDir.sort(key=sort_key)
@@ -43,7 +67,7 @@ def generateDocx(pathStr: str, language):
     cases = {}
     for name in listDir:
         fileName = os.fsdecode(name)
-        if fileName.endswith(EXTENTION):
+        if fileName.endswith(extension):
             baseFileName = fileName.split(".")[0]
             with open(pathStr + fileName, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -57,11 +81,7 @@ def generateDocx(pathStr: str, language):
 
     for key, value in cases.items():
         cases[key] = (
-            value
-            if any(
-                any(fn in line for fn in ("scanf", "gets", "fgets")) for line in value
-            )
-            else []
+            value if any(any(fn in line for fn in inputScan) for line in value) else []
         )
 
     prompt = """
@@ -111,7 +131,7 @@ def generateDocx(pathStr: str, language):
     """
 
     for baseFileName, ioList in cases.items():
-        prompt += baseFileName + EXTENTION + "\n"
+        prompt += baseFileName + extension + "\n"
 
         for io in ioList:
             prompt += io + "\n"
@@ -126,18 +146,20 @@ def generateDocx(pathStr: str, language):
 
     response = json.loads(res.output[0].content[0].text)
 
+    print(cases)
+    print(response)
     imageDict = {}
     for baseFileName in cases:
 
-        compileArgs = shlex.split(COMPILE_STR.replace("$s", pathStr + baseFileName))
-
-        runArgsStr = RUN_STR.replace("$s", pathStr + baseFileName)
+        runArgsStr = run_cmd.replace("$s", pathStr + baseFileName)
 
         # compile
-        subprocess.run(compileArgs)
+        if compile_cmd != "":
+            compileArgs = shlex.split(compile_cmd.replace("$s", pathStr + baseFileName))
+            subprocess.run(compileArgs)
         print(baseFileName, ", ", end="")
 
-        inputs = response[baseFileName + EXTENTION]
+        inputs = response[baseFileName + extension]
 
         imageDict[baseFileName] = []
         imageFileName = f"{baseFileName}(0)"
@@ -145,20 +167,25 @@ def generateDocx(pathStr: str, language):
         if len(inputs) == 0:
             res = window_task.runTypeAndSS(runArgsStr, "", imageFileName)
             if res == -1:
-                return
+                window_task.closeAllCMD()
+                raise TimeoutError()
+
             imageDict[baseFileName].append(imageFileName)
 
         for i, inp in enumerate(inputs):
             imageFileName = f"{baseFileName}({i})"
             res = window_task.runTypeAndSS(runArgsStr, inp, imageFileName)
             if res == -1:
-                return
+                window_task.closeAllCMD()
+                raise TimeoutError()
+
             imageDict[baseFileName].append(imageFileName)
 
+    window_task.closeAllCMD()
     document = Document()
 
-    document.add_heading(HEADING_1, level=1)
-    document.add_paragraph(PARAGRAPH)
+    document.add_heading(heading, level=1)
+    document.add_paragraph(paragraph)
 
     for fileBaseName, code in contents.items():
         document.add_heading(fileBaseName, level=2)
@@ -178,11 +205,11 @@ def generateDocx(pathStr: str, language):
 
             document.add_picture(imagePath, width=target_width, height=target_height)
 
-        if PAGE_BREAK:
+        if page_break:
             document.add_page_break()
         else:
             document.add_paragraph("\n")
 
-    document.save("docx.docx")
-
-    return os.getcwd() + "\\" + "docx.docx"
+    savePath = pathStr + "docx_generated.docx"
+    document.save(savePath)
+    return savePath

@@ -4,6 +4,11 @@ import pyautogui
 import pygetwindow as gw
 import os
 
+def closeAllCMD():
+    for w in gw.getWindowsWithTitle("cmd"):
+        w.close()
+
+    
 
 def runTypeAndSS(runArgsStr, input_str, file_name):
     os.makedirs("screenshots", exist_ok=True)
@@ -34,9 +39,7 @@ def runTypeAndSS(runArgsStr, input_str, file_name):
     if gw.getActiveWindow() is None or gw.getActiveWindow().title != "cmd":
         print("NOT CMD")
 
-        for w in gw.getWindowsWithTitle("cmd"):
-            w.close()
-
+        closeAllCMD()
         return -1
 
     for inp in input_str.splitlines():

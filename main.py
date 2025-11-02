@@ -5,20 +5,13 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
 from qfluentwidgets import *
-from qframelesswindow import *
 from qfluentwidgets import FluentIcon as FIF
 
-languages = ["C", "C++", "Python"]
+import settings_widget
+from config_setup import cfg, languages
 
-
-class Config(QConfig):
-    language = OptionsConfigItem(
-        "DOCX", "Language", "Python", OptionsValidator(languages)
-    )
-
-
-cfg = Config()
 qconfig.load("config.json", cfg)
+print(cfg)
 
 
 class DocxWorker(QThread):
@@ -34,7 +27,28 @@ class DocxWorker(QThread):
         try:
             import compileDocx  # import here to avoid blocking GUI
 
-            docx_path = compileDocx.generateDocx(self.folder + "/", self.language)
+            lang_conf = next(
+                (l for l in cfg.languages.value if l["name"] == cfg.language.value),
+                None,
+            )
+            if not lang_conf:
+                raise ValueError("Invalid language config")
+
+            inputs = [s.strip() for s in lang_conf["input"].split(",") if s.strip()]
+            prints = [s.strip() for s in lang_conf["output"].split(",") if s.strip()]
+
+            docx_path = compileDocx.generateDocx(
+                self.folder + "/",
+                inputScan=inputs,
+                printScan=prints,
+                extension=lang_conf["extension"],
+                compile_cmd=lang_conf["compile"],
+                run_cmd=lang_conf["run"],
+                page_break=cfg.pageBreak.value,
+                heading=cfg.heading.value,
+                paragraph=cfg.paragraph.value,
+            )
+
             self.finished.emit(docx_path)
         except Exception as e:
             self.failed.emit(str(e))
@@ -69,7 +83,7 @@ class DocxWidget(QFrame):
         # Folder selection card
         self.folderCard = PushSettingCard(
             text="Browse",
-            icon=FluentIcon.FOLDER,
+            icon=FIF.FOLDER,
             title="Working Directory",
             content="No folder selected",
             parent=self.docxGroup,
@@ -79,7 +93,7 @@ class DocxWidget(QFrame):
         # Language selection card
         self.langCard = ComboBoxSettingCard(
             configItem=cfg.language,
-            icon=FluentIcon.CODE,
+            icon=FIF.CODE,
             title="Language",
             content="Select the programming language of your source files",
             texts=languages,
@@ -90,8 +104,9 @@ class DocxWidget(QFrame):
         self.docxGroup.addSettingCard(self.folderCard)
         self.docxGroup.addSettingCard(self.langCard)
 
-        self.generateBtn = PrimaryPushButton(FluentIcon.DOCUMENT, "Generate")
+        self.generateBtn = PrimaryPushButton(FIF.DOCUMENT, "Generate")
         self.generateBtn.setFixedSize(QSize(220, 46))
+        self.generateBtn.clicked.connect(self.generateDocx)
 
         layout.addWidget(self.docxGroup)
         layout.addWidget(self.generateBtn, 0, Qt.AlignCenter)
@@ -132,12 +147,12 @@ class DocxWidget(QFrame):
                 title="Please don't touch your keyboard 🧠",
                 content="The outputs will be shown and taken screenshot of automatically...",
                 position=InfoBarPosition.TOP,
-                duration=4000,
+                duration=5000,
                 parent=self,
             ),
         )
 
-        self.worker = DocxWorker(self.selectedFolder, cfg.lanuage.value)
+        self.worker = DocxWorker(self.selectedFolder, cfg.language.value)
         self.worker.finished.connect(lambda path: self.onDocxDone(path))
         self.worker.failed.connect(lambda err: self.onDocxFail(err))
         self.worker.start()
@@ -147,7 +162,9 @@ class DocxWidget(QFrame):
         self.progressRing.hide()
         self.setDisabled(False)
 
-        subprocess.run(["explorer", docx_path])
+        folder_path = "\\".join(docx_path.split("/")[:-1])
+        print(folder_path)
+        subprocess.run(["explorer", folder_path])
         InfoBar.success(
             title="Done ✅",
             content=f"DOCX saved to:\n{docx_path}",
@@ -181,10 +198,6 @@ class Widget(QFrame):
         self.label.setAlignment(Qt.AlignCenter)
         self.hBoxLayout.addWidget(self.label, 1, Qt.AlignCenter)
 
-        if "Make Docx" in text:
-            self.button = PrimaryPushButton("Create DOCX", self)
-            self.hBoxLayout.addWidget(self.button, alignment=Qt.AlignCenter)
-
         # Must set a globally unique object name for the sub-interface
         self.setObjectName(text.replace(" ", "-"))
 
@@ -201,7 +214,7 @@ class Window(FluentWindow):
         # Create sub-interfaces, when actually using, replace Widget with your own sub-interface
         self.makeDocx = DocxWidget()
         self.videoInterface = Widget("Video Interface", self)
-        self.settingInterface = Widget("Setting Interface", self)
+        self.settingInterface = settings_widget.SettingsWidget()
 
         self.initNavigation()
         self.initWindow()

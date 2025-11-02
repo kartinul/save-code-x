@@ -3,3 +3,4 @@ dotenv
 pillow
 pyautogui
 python-docx
+PyQt-Fluent-Widgets[full]
