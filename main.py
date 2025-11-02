@@ -8,7 +8,7 @@ from qfluentwidgets import *
 from qfluentwidgets import FluentIcon as FIF
 
 import settings_widget
-from config_setup import cfg, languages
+from config_setup import cfg, language_names
 
 qconfig.load("config.json", cfg)
 print(cfg)
@@ -28,7 +28,11 @@ class DocxWorker(QThread):
             import compileDocx  # import here to avoid blocking GUI
 
             lang_conf = next(
-                (l for l in cfg.languages.value if l["name"] == cfg.language.value),
+                (
+                    l
+                    for l in cfg.language_names.value
+                    if l["name"] == cfg.language.value
+                ),
                 None,
             )
             if not lang_conf:
@@ -96,7 +100,7 @@ class DocxWidget(QFrame):
             icon=FIF.CODE,
             title="Language",
             content="Select the programming language of your source files",
-            texts=languages,
+            texts=language_names,
             parent=self.docxGroup,
         )
 
