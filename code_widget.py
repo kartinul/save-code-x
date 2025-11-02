@@ -270,9 +270,10 @@ class CodeWidget(QFrame):
 
             if use_ai:
                 name = await get_clipboard_code_name(self.client)
-                filename = f"{count}_{name}.py" if name else f"{count}.py"
+                ext = self.extPicker.currentText().strip()
+                filename = f"{count}_{name}{ext}" if name else f"{count}.{ext}"
             else:
-                filename = f"{count}.py"
+                filename = f"{count}.{ext}"
 
             pathToSave = self.selectedFolder + "/" + filename
 
