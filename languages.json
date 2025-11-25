@@ -3,64 +3,48 @@
     "name": "C",
     "extension": ".c",
     "compile": "gcc $s.c -o $s",
-    "run": "$s.exe",
-    "input": "scanf, fgets, gets",
-    "output": "printf, puts"
+    "run": "$s.exe"
   },
   {
     "name": "C++",
     "extension": ".cpp",
     "compile": "g++ $s.cpp -o $s",
-    "run": "$s.exe",
-    "input": "cin, scanf, fgets, gets",
-    "output": "cout, printf, puts"
+    "run": "$s.exe"
   },
   {
     "name": "Python",
     "extension": ".py",
     "compile": "",
-    "run": "python $s.py",
-    "input": "input",
-    "output": "print"
+    "run": "python $s.py"
   },
   {
     "name": "Java",
     "extension": ".java",
     "compile": "javac $s.java",
-    "run": "java $s",
-    "input": "Scanner, BufferedReader",
-    "output": "System.out.print, System.out.println"
+    "run": "java $s"
   },
   {
     "name": "JavaScript",
     "extension": ".js",
     "compile": "",
-    "run": "node $s.js",
-    "input": "prompt, process.stdin",
-    "output": "console.log"
+    "run": "node $s.js"
   },
   {
     "name": "Rust",
     "extension": ".rs",
     "compile": "rustc $s.rs",
-    "run": "$s.exe",
-    "input": "std::io::stdin",
-    "output": "println!, print!"
+    "run": "$s.exe"
   },
   {
     "name": "C#",
     "extension": ".cs",
     "compile": "csc $s.cs",
-    "run": "$s.exe",
-    "input": "Console.ReadLine",
-    "output": "Console.WriteLine, Console.Write"
+    "run": "$s.exe"
   },
   {
     "name": "Kotlin",
     "extension": ".kt",
     "compile": "kotlinc $s.kt -include-runtime -d $s.jar",
-    "run": "java -jar $s.jar",
-    "input": "readLine",
-    "output": "println, print"
+    "run": "java -jar $s.jar"
   }
 ]

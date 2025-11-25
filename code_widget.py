@@ -1,14 +1,32 @@
-from PyQt5.QtCore import *
-from PyQt5.QtGui import *
-from PyQt5.QtWidgets import *
+from PyQt5.QtCore import Qt, QEvent, QTimer, QMetaObject, Q_ARG, pyqtSlot, QObject
+from PyQt5.QtGui import QColor, QFont, QPainter, QIntValidator
+from PyQt5.QtWidgets import (
+    QFrame,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QFileDialog,
+    QSizePolicy,
+)
 
 import pyperclip
-from qfluentwidgets import *
+import asyncio
+from qfluentwidgets import (
+    ToolButton,
+    CheckBox,
+    LineEdit,
+    ComboBox,
+    BodyLabel,
+    InfoBar,
+    InfoBarPosition,
+    IndeterminateProgressRing,
+    setFont,
+)
 from qfluentwidgets import FluentIcon as FIF
 
 from config_setup import cfg
-import asyncio
 from getName import get_clipboard_code_name
+from utils import save_file, commit_file, shortenPath
 
 
 class CodeWidget(QFrame):
@@ -19,8 +37,8 @@ class CodeWidget(QFrame):
         self.client = client
 
         # --- animation settings ---
-        self.ANIMATION_SPEED = 30  # how fast the bubble expands (higher = faster)
-        self.FILE_SAVED_DURATION = 500  # how long “File Saved” stays visible (ms)
+        self.ANIMATION_SPEED = 30
+        self.FILE_SAVED_DURATION = 500
 
         mainLayout = QVBoxLayout(self)
         mainLayout.setContentsMargins(40, 40, 40, 40)
@@ -57,9 +75,13 @@ class CodeWidget(QFrame):
         bottomBar.addStretch(1)
 
         self.useAiCheck = CheckBox("Use AI")
-        self.useAiCheck.setChecked(True)  # default enabled
+        self.useAiCheck.setChecked(False)
         self.useAiCheck.clicked.connect(self.updateFileLabel)
         bottomBar.addWidget(self.useAiCheck, 0, Qt.AlignRight)
+
+        self.autoCommit = CheckBox("Auto Commit")
+        self.autoCommit.setChecked(False)
+        bottomBar.addWidget(self.autoCommit, 0, Qt.AlignRight)
 
         mainLayout.addLayout(bottomBar)
 
@@ -146,6 +168,7 @@ class CodeWidget(QFrame):
             )
         else:
             self.centerLabel.setText(f"Ctrl + V to save file as {num}{ext}")
+        self.updateCounterFromFolder()
 
     def selectFolder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Folder")
@@ -159,7 +182,7 @@ class CodeWidget(QFrame):
                 position=InfoBarPosition.BOTTOM,
                 parent=self,
             )
-            short = self.shortenPath(folder)
+            short = shortenPath(folder)
             self.folderLabel.setText(short)
 
             self.updateCounterFromFolder()
@@ -266,14 +289,15 @@ class CodeWidget(QFrame):
     async def fetchNameAndSave(self):
         try:
             use_ai = self.useAiCheck.isChecked()
+            auto_commit = self.autoCommit.isChecked()
             count = int(self.counterBox.text() or 0)
 
+            ext = self.extPicker.currentText().strip()
             if use_ai:
                 name = await get_clipboard_code_name(self.client)
-                ext = self.extPicker.currentText().strip()
-                filename = f"{count}_{name}{ext}" if name else f"{count}.{ext}"
+                filename = f"{count}_{name}{ext}" if name else f"{count}{ext}"
             else:
-                filename = f"{count}.{ext}"
+                filename = f"{count}{ext}"
 
             pathToSave = self.selectedFolder + "/" + filename
 
@@ -283,7 +307,11 @@ class CodeWidget(QFrame):
             )
 
             code = pyperclip.paste()
-            self.save_file(full_path=pathToSave, content=code)
+            save_file(full_path=pathToSave, content=code)
+
+            if auto_commit:
+                commit_text = f"Added a new file {filename}"
+                commit_file(folder_path=self.selectedFolder, commit_text=commit_text)
 
         except Exception as e:
             print("Error fetching name:", e)
@@ -340,23 +368,3 @@ class CodeWidget(QFrame):
 
         # set next count
         self.counterBox.setText(str(max_num + 1))
-
-    def save_file(self, full_path: str, content: str):
-        import os
-
-        print(full_path, end="()")
-        # make sure the directory exists
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-        # write the file
-        with open(full_path, "w", encoding="utf-8") as f:
-            f.write(content)
-
-    def shortenPath(self, path: str, parts: int = 3) -> str:
-        """Return only the last `parts` of a path, e.g. C:/.../foo/bar"""
-        import os
-
-        split_path = os.path.normpath(path).split(os.sep)
-        if len(split_path) > parts:
-            return f"...{os.sep}" + os.sep.join(split_path[-parts:])
-        return path

@@ -47,6 +47,23 @@ class SettingsWidget(QWidget):
         contentLayout.addWidget(title)
         contentLayout.addWidget(desc)
 
+        self.apiGroup = SettingCardGroup("API Settings", content)
+
+        self.apiKeyCard = SettingCard(
+            icon=FIF.EDIT,
+            title="OpenAI Secret Key",
+            content="Used for AI features (kept locally, not uploaded).",
+            parent=self.apiGroup,
+        )
+        self.apiKeyEdit = LineEdit(self)
+        self.apiKeyEdit.setEchoMode(QLineEdit.Password)  # hide text
+        self.apiKeyEdit.setPlaceholderText("sk-...")
+        self.apiKeyEdit.setText(cfg.openai_key.value)
+        self.apiKeyCard.hBoxLayout.addWidget(self.apiKeyEdit)
+
+        self.apiGroup.addSettingCard(self.apiKeyCard)
+        contentLayout.addWidget(self.apiGroup)
+
         # --- DOCX Section ---
         self.docxGroup = SettingCardGroup("DOCX Settings", content)
 
@@ -183,34 +200,28 @@ class SettingsWidget(QWidget):
         self.compileEdit = add_lineedit_card(
             FIF.CODE, "Compile Command", langConf.get("compile", "")
         )
-        self.runEdit = add_lineedit_card(
+        self.extentionEdit = add_lineedit_card(
             FIF.PENCIL_INK, "Extension", langConf.get("extension", "")
         )
         # run
-        self.extentionEdit = add_lineedit_card(
+        self.runEdit = add_lineedit_card(
             FIF.PLAY, "Run Command", langConf.get("run", "")
-        )
-        # input tags (fall back to "keywords" for older configs)
-        self.inputEdit = add_lineedit_card(
-            FIF.INFO, "Input Tags", langConf.get("input", langConf.get("keywords", ""))
-        )
-        # output tags (or empty)
-        self.outputEdit = add_lineedit_card(
-            FIF.TAG, "Output Tags", langConf.get("output", "")
         )
 
     def saveConfig(self):
+
         langName = self.langDropdown.currentText()
         langConf = self.getLangConfig(langName)
         if not langConf:
             return
 
         langConf["compile"] = self.compileEdit.text()
-        langConf["extension"] = self.extentionEdit.text()
         langConf["run"] = self.runEdit.text()
-        langConf["input"] = self.inputEdit.text()
-        langConf["output"] = self.outputEdit.text()
+        langConf["extension"] = self.extentionEdit.text()
 
+        cfg.heading.value = self.headingEdit.text()
+        cfg.paragraph.value = self.paragraphEdit.text()
+        cfg.openai_key.value = self.apiKeyEdit.text().strip()
         cfg.language.value = langName
         cfg.languages.value = cfg.languages.value  # trigger save
         cfg.save()

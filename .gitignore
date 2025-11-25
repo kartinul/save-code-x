@@ -1,4 +1,8 @@
+prompt_gen.txt
+a.py
 screenshots/
+res.json
+config.json
 *.docx*
 uploads/
 # Byte-compiled / optimized / DLL files

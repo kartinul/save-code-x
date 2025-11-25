@@ -3,15 +3,42 @@ import time
 import pyautogui
 import pygetwindow as gw
 import os
+from threading import Thread
+from pynput import keyboard
+
+stop_flag = False
+input_mode = False
+
+
+def on_press(key):
+    global stop_flag, input_mode
+    try:
+        if key.char and key.char.lower() == "x" and not input_mode:
+            print("\n[X] Stop key pressed — terminating execution...")
+            stop_flag = True
+            closeAllCMD()
+    except:
+        pass
+
+
+def keyboard_listener():
+    with keyboard.Listener(on_press=on_press) as listener:
+        listener.join()
+
 
 def closeAllCMD():
     for w in gw.getWindowsWithTitle("cmd"):
-        w.close()
+        try:
+            w.close()
+        except:
+            pass
 
-    
 
 def runTypeAndSS(runArgsStr, input_str, file_name):
+    global stop_flag, input_mode
+    stop_flag = False
     os.makedirs("screenshots", exist_ok=True)
+
     subprocess.Popen(
         f'start "" cmd /c "{runArgsStr} && echo. && echo. && pause"', shell=True
     )
@@ -20,6 +47,10 @@ def runTypeAndSS(runArgsStr, input_str, file_name):
     start_time = time.time()
 
     while time.time() - start_time < 5:
+        if stop_flag:
+            stop_flag = False
+            print("returning -1 when searching for cmd")
+            return -1
         for w in gw.getWindowsWithTitle("cmd"):
             try:
                 if w.width > 100 and w.height > 100:
@@ -33,20 +64,26 @@ def runTypeAndSS(runArgsStr, input_str, file_name):
         time.sleep(0.05)
 
     if not win:
-        print("No CMD Window Fount")
-        return
+        print("no CMD window found")
 
     if gw.getActiveWindow() is None or gw.getActiveWindow().title != "cmd":
-        print("NOT CMD")
-
-        closeAllCMD()
-        return -1
+        print("The current window not CMD")
 
     for inp in input_str.splitlines():
-        if inp.strip():
-            pyautogui.typewrite(inp, interval=0.01)
-            pyautogui.press("enter")
+        if stop_flag:
+            stop_flag = False
+            print("returning -1 while typing")
+            return -1
+        print(f"inp: {inp}")
+        input_mode = True
+        pyautogui.write(inp)
+        input_mode = False
+        pyautogui.press("enter")
 
+    if stop_flag:
+        stop_flag = False
+        print("returning -1 after typing")
+        return -1
     time.sleep(0.8)
 
     try:
@@ -57,3 +94,7 @@ def runTypeAndSS(runArgsStr, input_str, file_name):
         print(f"Screenshot failed for {file_name}: {e}")
 
     pyautogui.press("enter")
+
+
+# Start the key listener in a separate thread
+Thread(target=keyboard_listener, daemon=True).start()

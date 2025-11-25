@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 import os
 
 load_dotenv()
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_KEY"))
+client = AsyncOpenAI(api_key=cfg.openai_key.value)
 
 
 qconfig.load("config.json", cfg)
@@ -58,4 +58,4 @@ class Window(FluentWindow):
     def initWindow(self):
         self.resize(900, 700)
         self.setWindowIcon(QIcon("app_ico.ico"))
-        self.setWindowTitle("PyQt-Fluent-Widgets")
+        self.setWindowTitle("SaveCodeX")
