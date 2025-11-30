@@ -23,10 +23,6 @@ python -m venv venv
 \venv\Scripts\activate
 pip install -r requirements.txt
 ````
-Then make a new file `.env` with the contents
-```
-OPENAI_KEY = YOUR_OPEN_AI_KEY
-```
 and run with 
 ```
 python main.py
