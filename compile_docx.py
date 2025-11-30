@@ -1,4 +1,5 @@
 import json
+import sys
 from PIL import Image
 import os
 import shlex
@@ -19,6 +20,12 @@ RUN_STR = "$s.exe"
 HEADING = "Week 9"
 PARAGRAPH = "Name: Kartik Sharma"
 PAGE_BREAK = False
+
+
+def resource_path(rel_path):
+    if hasattr(sys, "_MEIPASS"):
+        return os.path.join(sys._MEIPASS, rel_path)
+    return os.path.join(os.path.abspath("."), rel_path)
 
 
 def sort_key(name):
@@ -139,7 +146,7 @@ def genFilenameCodeDict(pathStr, extension, listDir):
 
 
 def genPropt(extension, filenameCodeDict):
-    with open("prompt_def.md", "r", encoding="utf-8") as file:
+    with open(resource_path("prompt_def.md"), "r", encoding="utf-8") as file:
         prompt = file.read()
 
     prompt += f"The files will be of extention {extension}\n"
@@ -150,6 +157,4 @@ def genPropt(extension, filenameCodeDict):
         prompt += code
         prompt += f"{filename} END\n"
 
-    with open("prompt_gen.txt", "w") as f:
-        f.write(prompt)
     return prompt
