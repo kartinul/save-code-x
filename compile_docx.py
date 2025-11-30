@@ -1,4 +1,5 @@
 import json
+import shutil
 import sys
 from PIL import Image
 import os
@@ -108,6 +109,8 @@ def generateDocx(
     document.add_heading(heading.replace("$s", pathStr.split("/")[-2]), level=1)
     document.add_paragraph(paragraph)
 
+    os.makedirs("screenshots", exist_ok=True)
+
     print(imageDict)
 
     for fileName, code in filenameCodeDict.items():
@@ -131,6 +134,10 @@ def generateDocx(
 
     savePath = pathStr + "docx_generated.docx"
     document.save(savePath)
+
+    if os.path.exists("screenshots"):
+        shutil.rmtree("screenshots")
+
     return savePath
 
 
@@ -153,8 +160,10 @@ def genPropt(extension, filenameCodeDict):
     prompt += "Now process the following files exactly as given:\n"
 
     for filename, code in filenameCodeDict.items():
-        prompt += filename + "\n"
+        prompt += "\n" + filename + "\n"
         prompt += code
         prompt += f"{filename} END\n"
+
+    prompt += "The JSON must not be in any formatting including triple backtick json markdown object"
 
     return prompt

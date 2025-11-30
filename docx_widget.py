@@ -1,5 +1,3 @@
-import sys
-import traceback
 import os
 import subprocess
 import asyncio
@@ -77,8 +75,7 @@ class DocxWorker(QThread):
 
             self.finished.emit(docx_path)
         except Exception as e:
-            tb = sys.exc_info()[0]
-            self.failed.emit(f"At line: {tb.tb_lineno}, Error: {str(e)} ")
+            self.failed.emit(str(e))
 
 
 class DocxWidget(QFrame):
